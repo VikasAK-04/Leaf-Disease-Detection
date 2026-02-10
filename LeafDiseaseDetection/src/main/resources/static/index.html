@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaf Disease Detection</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0f1e;
+            background-image:
+                radial-gradient(at 20% 20%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+                radial-gradient(at 80% 80%, rgba(139, 92, 246, 0.08) 0px, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(59, 130, 246, 0.05) 0px, transparent 50%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #e2e8f0;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                linear-gradient(90deg, rgba(16, 185, 129, 0.03) 1px, transparent 1px),
+                linear-gradient(rgba(16, 185, 129, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            animation: fadeInDown 0.8s ease-in;
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #10b981 0%, #34d399 50%, #6ee7b7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            letter-spacing: -0.02em;
+        }
+
+        .leaf-icon {
+            width: 48px;
+            height: 48px;
+            filter: drop-shadow(0 0 20px rgba(16, 185, 129, 0.5));
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .subtitle {
+            color: #94a3b8;
+            font-size: 1.05rem;
+            font-weight: 400;
+            letter-spacing: 0.02em;
+        }
+
+        .container {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            border-radius: 28px;
+            padding: 32px;
+            width: 100%;
+            max-width: 850px;
+            box-shadow:
+                0 0 0 1px rgba(16, 185, 129, 0.1),
+                0 30px 80px rgba(0, 0, 0, 0.6),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            animation: slideUp 0.8s ease-out;
+            position: relative;
+            z-index: 1;
+        }
+
+        .image-preview {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 2px solid transparent;
+            background-image:
+                linear-gradient(135deg, #1e293b 0%, #0f172a 100%),
+                linear-gradient(135deg, rgba(16, 185, 129, 0.4), rgba(139, 92, 246, 0.4));
+            background-origin: border-box;
+            background-clip: padding-box, border-box;
+            border-radius: 20px;
+            height: 320px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 28px;
+            overflow: hidden;
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .image-preview::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 20px;
+            padding: 2px;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(139, 92, 246, 0.2));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .image-preview:hover::before {
+            opacity: 1;
+        }
+
+        .image-preview img,
+        .image-preview video {
+            max-height: 100%;
+            max-width: 100%;
+            object-fit: contain;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .placeholder {
+            text-align: center;
+            color: #64748b;
+            transition: all 0.3s ease;
+        }
+
+        .image-preview:hover .placeholder {
+            color: #10b981;
+            transform: scale(1.05);
+        }
+
+        .placeholder svg {
+            width: 56px;
+            height: 56px;
+            margin-bottom: 14px;
+            opacity: 0.4;
+            filter: drop-shadow(0 4px 12px rgba(16, 185, 129, 0.3));
+        }
+
+        .placeholder p {
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .btn {
+            padding: 16px 28px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 400px;
+            height: 400px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        .btn svg {
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #fff;
+            box-shadow: 0 8px 24px rgba(245, 158, 11, 0.3);
+        }
+
+        .upload-btn:hover {
+            box-shadow: 0 12px 32px rgba(245, 158, 11, 0.5);
+        }
+
+        .start-webcam-btn {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: #fff;
+            box-shadow: 0 8px 24px rgba(139, 92, 246, 0.3);
+        }
+
+        .start-webcam-btn:hover {
+            box-shadow: 0 12px 32px rgba(139, 92, 246, 0.5);
+        }
+
+        .capture-btn {
+            background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+            color: #fff;
+            box-shadow: 0 8px 24px rgba(236, 72, 153, 0.3);
+        }
+
+        .capture-btn:hover {
+            box-shadow: 0 12px 32px rgba(236, 72, 153, 0.5);
+        }
+
+        .predict-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #fff;
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+            grid-column: 1 / -1;
+        }
+
+        .predict-btn:hover {
+            box-shadow: 0 12px 32px rgba(16, 185, 129, 0.5);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .results-section {
+            margin-top: 8px;
+        }
+
+        .prediction {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 18px;
+            padding: 24px;
+            margin-bottom: 24px;
+            text-align: center;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #10b981;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.5s ease-in;
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.15);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .prediction::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(16, 185, 129, 0.1), transparent);
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .prediction span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .prediction.unknown {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%);
+            border-color: rgba(239, 68, 68, 0.4);
+            color: #fca5a5;
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.2);
+        }
+
+        .prediction.unknown::before {
+            background: linear-gradient(45deg, transparent, rgba(239, 68, 68, 0.1), transparent);
+        }
+
+        .section-title {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .all-predictions {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 14px;
+        }
+
+        .prediction-item {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 14px;
+            padding: 18px 20px;
+            text-align: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: fadeIn 0.5s ease-in;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .prediction-item::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(139, 92, 246, 0.1));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .prediction-item:hover::before {
+            opacity: 1;
+        }
+
+        .prediction-item:hover {
+            transform: translateY(-4px);
+            border-color: rgba(16, 185, 129, 0.5);
+            box-shadow: 0 12px 28px rgba(16, 185, 129, 0.25);
+        }
+
+        .prediction-item .label {
+            color: #94a3b8;
+            font-weight: 500;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .prediction-item .value {
+            color: #10b981;
+            font-size: 1.4rem;
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.2rem;
+            }
+
+            .container {
+                padding: 28px;
+            }
+
+            .image-preview {
+                height: 320px;
+            }
+
+            .controls-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .predict-btn {
+                grid-column: 1;
+            }
+
+            .all-predictions {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.8rem;
+                gap: 10px;
+            }
+
+            .leaf-icon {
+                width: 36px;
+                height: 36px;
+            }
+
+            .container {
+                padding: 20px;
+            }
+
+            .prediction {
+                font-size: 1.1rem;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h1>
+        <svg class="leaf-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20" stroke="url(#gradient)" stroke-width="2" stroke-linecap="round"/>
+            <path d="M12 4C12 4 15 7 15 12C15 17 12 20 12 20" stroke="url(#gradient)" stroke-width="2" stroke-linecap="round"/>
+            <path d="M4 12H20" stroke="url(#gradient)" stroke-width="2" stroke-linecap="round"/>
+            <defs>
+                <linearGradient id="gradient" x1="4" y1="4" x2="20" y2="20">
+                    <stop offset="0%" stop-color="#10b981"/>
+                    <stop offset="100%" stop-color="#6ee7b7"/>
+                </linearGradient>
+            </defs>
+        </svg>
+        Leaf Disease Detection
+    </h1>
+    <p class="subtitle">AI-Powered Plant Health Analysis</p>
+</div>
+
+<div class="container">
+    <div class="image-preview" id="image-preview">
+        <div class="placeholder">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 16L8.586 11.414C9.367 10.633 10.633 10.633 11.414 11.414L16 16M14 14L15.586 12.414C16.367 11.633 17.633 11.633 18.414 12.414L20 14M14 8H14.01M6 20H18C19.1046 20 20 19.1046 20 18V6C20 4.89543 19.1046 4 18 4H6C4.89543 4 4 4.89543 4 6V18C4 19.1046 4.89543 20 6 20Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p>Upload or capture a leaf image</p>
+        </div>
+    </div>
+
+    <div class="controls-grid">
+        <label for="upload-input" class="btn upload-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15M17 8L12 3M12 3L7 8M12 3V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Upload Image</span>
+        </label>
+        <input type="file" id="upload-input" accept="image/*">
+
+        <button id="start-webcam-btn" class="btn start-webcam-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M23 7L16 12L23 17V7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect x="1" y="5" width="15" height="14" rx="2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Start Webcam</span>
+        </button>
+
+        <button id="capture-btn" class="btn capture-btn" style="display:none;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                <path d="M3 9C3 8.46957 3.21071 7.96086 3.58579 7.58579C3.96086 7.21071 4.46957 7 5 7H7L9 4H15L17 7H19C19.5304 7 20.0391 7.21071 20.4142 7.58579C20.7893 7.96086 21 8.46957 21 9V18C21 18.5304 20.7893 19.0391 20.4142 19.4142C20.0391 19.7893 19.5304 20 19 20H5C4.46957 20 3.96086 19.7893 3.58579 19.4142C3.21071 19.0391 3 18.5304 3 18V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Capture Photo</span>
+        </button>
+
+        <button id="predict-btn" class="btn predict-btn" style="display:none;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Analyze Disease</span>
+        </button>
+    </div>
+
+    <div class="results-section">
+        <div class="prediction" id="prediction"></div>
+        <div id="predictions-container" style="display:none;">
+            <div class="section-title">Detailed Analysis</div>
+            <div class="all-predictions" id="all-predictions"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const uploadInput = document.getElementById('upload-input');
+    const imagePreview = document.getElementById('image-preview');
+    const startWebcamBtn = document.getElementById('start-webcam-btn');
+    const captureBtn = document.getElementById('capture-btn');
+    const predictBtn = document.getElementById('predict-btn');
+    const predictionDiv = document.getElementById('prediction');
+    const allPredictionsDiv = document.getElementById('all-predictions');
+    const predictionsContainer = document.getElementById('predictions-container');
+
+    let videoStream;
+    let capturedImageBlob;
+
+    uploadInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            capturedImageBlob = file;
+            imagePreview.innerHTML = `<img src="${evt.target.result}" alt="Leaf Image">`;
+            predictBtn.style.display = 'flex';
+            predictionDiv.innerHTML = '';
+            predictionsContainer.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+    });
+
+    startWebcamBtn.addEventListener('click', async () => {
+        imagePreview.innerHTML = '';
+        predictBtn.style.display = 'none';
+        captureBtn.style.display = 'flex';
+        predictionDiv.innerHTML = '';
+        predictionsContainer.style.display = 'none';
+        try {
+            videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const video = document.createElement('video');
+            video.autoplay = true;
+            video.srcObject = videoStream;
+            imagePreview.appendChild(video);
+        } catch (err) {
+            alert('Could not access webcam: ' + err);
+        }
+    });
+
+    captureBtn.addEventListener('click', () => {
+        const video = imagePreview.querySelector('video');
+        if (!video) return;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
+        canvas.toBlob(blob => {
+            capturedImageBlob = new File([blob], "captured.png", { type: "image/png" });
+            const url = URL.createObjectURL(blob);
+            imagePreview.innerHTML = `<img src="${url}" alt="Captured Leaf">`;
+            predictBtn.style.display = 'flex';
+        });
+
+        video.srcObject.getTracks().forEach(track => track.stop());
+        captureBtn.style.display = 'none';
+    });
+
+    predictBtn.addEventListener('click', async () => {
+        if (!capturedImageBlob) return;
+        const formData = new FormData();
+        formData.append('file', capturedImageBlob);
+
+        predictionDiv.innerHTML = '<span>🔍 Analyzing leaf...</span>';
+        predictionDiv.classList.remove('unknown');
+        allPredictionsDiv.innerHTML = '';
+        predictionsContainer.style.display = 'none';
+
+        try {
+            const response = await fetch('http://localhost:8070/api/v1/predict', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            if (data.predicted_class === 'Unknown or Unrelated Image' || !data.success) {
+                predictionDiv.innerHTML = `<span>⚠️ ${data.message || "Unknown image detected!"}</span>`;
+                predictionDiv.classList.add('unknown');
+            } else {
+                predictionDiv.innerHTML = `<span>✓ ${data.predicted_class} <br><small style="font-size: 0.85em; opacity: 0.8;">${data.confidence}% confidence</small></span>`;
+                predictionDiv.classList.remove('unknown');
+            }
+
+            if (data.all_predictions) {
+                predictionsContainer.style.display = 'block';
+                allPredictionsDiv.innerHTML = '';
+                for (const [cls, val] of Object.entries(data.all_predictions)) {
+                    const div = document.createElement('div');
+                    div.className = 'prediction-item';
+                    div.innerHTML = `
+                        <div class="label">${cls}</div>
+                        <div class="value">${val}%</div>
+                    `;
+                    allPredictionsDiv.appendChild(div);
+                }
+            }
+        } catch (err) {
+            predictionDiv.innerHTML = `<span>❌ Error connecting to backend: ${err}</span>`;
+            predictionDiv.classList.add('unknown');
+        }
+    });
+</script>
+</body>
+</html>
